@@ -29,7 +29,8 @@ from gqlalchemy.exceptions import (
 )
 from gqlalchemy.graph_algorithms.integrated_algorithms import IntegratedAlgorithm
 from gqlalchemy.vendors.memgraph import Memgraph
-from gqlalchemy.models import Node, Relationship
+from gqlalchemy.models.node import Node
+from gqlalchemy.models.relationship import Relationship
 from gqlalchemy.utilities import to_cypher_labels, to_cypher_properties, to_cypher_value, to_cypher_qm_arguments
 from gqlalchemy.vendors.database_client import DatabaseClient
 
@@ -427,7 +428,7 @@ class UnionPartialQuery(PartialQuery):
 
     def construct_query(self) -> str:
         """Creates a UNION statement Cypher partial query."""
-        return f" UNION{f' ALL' if self.include_duplicates else ''} "
+        return f" UNION{' ALL' if self.include_duplicates else ''} "
 
 
 class DeletePartialQuery(PartialQuery):

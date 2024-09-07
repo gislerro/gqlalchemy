@@ -12,17 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from abc import ABC, abstractmethod
-from typing import Any, Dict, Iterator, Optional
+from __future__ import annotations
 
-import mgclient
-from neo4j import GraphDatabase
-from neo4j.graph import Node as Neo4jNode
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any, Dict, Iterator, Optional
+
+import mgclient  # type: ignore
+from neo4j import GraphDatabase  # type: ignore[import-untyped]
+from neo4j.graph import Node as Neo4jNode  # type: ignore[import-untyped]
 from neo4j.graph import Path as Neo4jPath
 from neo4j.graph import Relationship as Neo4jRelationship
 
 from gqlalchemy.exceptions import database_error_handler, connection_handler
-from gqlalchemy.models import Node, Path, Relationship
+from gqlalchemy.models.node import NodeMetaclass
+from gqlalchemy.models.relationship import RelationshipMetaclass
+from gqlalchemy.models.path import Path
+
+if TYPE_CHECKING:
+    from gqlalchemy.models.node import Node
+    from gqlalchemy.models.relationship import Relationship
+
 
 __all__ = ("Connection",)
 
@@ -116,34 +125,41 @@ class MemgraphConnection(Connection):
         return connection
 
 
-def _convert_memgraph_value(value: Any) -> Any:
+def _convert_memgraph_value(value: Any) -> Node | Relationship | Path | Any:
     """Converts Memgraph objects to custom Node/Relationship objects."""
     if isinstance(value, mgclient.Relationship):
-        return Relationship.parse_obj(
-            {
-                "_type": value.type,
-                "_id": value.id,
-                "_start_node_id": value.start_id,
-                "_end_node_id": value.end_id,
-                **value.properties,
-            }
-        )
+        # TODO: type mgclient.Relationship and proper initialization of instance
+
+        Relationship = RelationshipMetaclass.get_relationship_class_by_type(value.type)
+
+        properties = dict(value.properties)
+        properties["start_node_id"] = value.start_id
+        properties["end_node_id"] = value.end_id
+
+        relationship = Relationship(**properties)
+        relationship._id = value.id
+
+        return relationship
 
     if isinstance(value, mgclient.Node):
-        return Node.parse_obj(
-            {
-                "_id": value.id,
-                "_labels": set(value.labels),
-                **value.properties,
-            }
-        )
+        # TODO: type mgclient.Node and proper initialization of instance
+        # make labels hashable since get_node_class_by_labels uses lru_cache
+        labels = frozenset(value.labels)
+        Node = NodeMetaclass.get_node_class_by_labels(labels)
+        node = Node(**value.properties)
+        node._id = value.id
+
+        return node
 
     if isinstance(value, mgclient.Path):
-        return Path.parse_obj(
-            {
-                "_nodes": list([_convert_memgraph_value(node) for node in value.nodes]),
-                "_relationships": list([_convert_memgraph_value(rel) for rel in value.relationships]),
-            }
+
+        nodes = list([_convert_memgraph_value(node) for node in value.nodes])
+        relationships = list([_convert_memgraph_value(rel) for rel in value.relationships])
+
+        # FIXME: individual conversion functions for nodes, relationships and paths => no cast or type ignore
+        return Path(
+            nodes=nodes,  # type: ignore
+            relationships=relationships,  # type: ignore
         )
 
     return value
@@ -189,34 +205,35 @@ class Neo4jConnection(Connection):
         )
 
 
-def _convert_neo4j_value(value: Any) -> Any:
+def _convert_neo4j_value(value: Any) -> Node | Relationship | Path | Any:
     """Converts Neo4j objects to custom Node/Relationship objects."""
     if isinstance(value, Neo4jRelationship):
-        return Relationship.parse_obj(
-            {
-                "_type": value.type,
-                "_id": value.id,
-                "_start_node_id": value.start_node.id,
-                "_end_node_id": value.end_node.id,
-                **dict(value.items()),
-            }
-        )
+        Relationship = RelationshipMetaclass.get_relationship_class_by_type(value.type)
+        properties = dict(value.items())
+        properties["start_node_id"] = value.start_node.id
+        properties["end_node_id"] = value.end_node.id
+        relationship = Relationship(**properties)
+        relationship._id = value.id
+
+        return relationship
 
     if isinstance(value, Neo4jNode):
-        return Node.parse_obj(
-            {
-                "_id": value.id,
-                "_labels": set(value.labels),
-                **dict(value.items()),
-            }
-        )
+        labels = frozenset(value.labels)
+        Node = NodeMetaclass.get_node_class_by_labels(labels)
+        properties = dict(value.items())
+        node = Node(**properties)
+        node._id = value.id
+
+        return node
 
     if isinstance(value, Neo4jPath):
-        return Path.parse_obj(
-            {
-                "_nodes": list([_convert_neo4j_value(node) for node in value.nodes]),
-                "_relationships": list([_convert_neo4j_value(rel) for rel in value.relationships]),
-            }
+        nodes = list([_convert_memgraph_value(node) for node in value.nodes])
+        relationships = list([_convert_memgraph_value(rel) for rel in value.relationships])
+
+        # FIXME: individual conversion functions for nodes, relationships and paths => no cast or type ignore
+        return Path(
+            nodes=nodes,  # type: ignore
+            relationships=relationships,  # type: ignore
         )
 
     return value

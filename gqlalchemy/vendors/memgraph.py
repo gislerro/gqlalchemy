@@ -15,7 +15,7 @@
 from enum import Enum
 import os
 import sqlite3
-from typing import List, Optional, Union
+from typing import List, Optional, Union, override
 
 from gqlalchemy.connection import Connection, MemgraphConnection
 from gqlalchemy.disk_storage import OnDiskPropertyDatabase
@@ -25,15 +25,11 @@ from gqlalchemy.exceptions import (
     GQLAlchemyOnDiskPropertyDatabaseNotDefinedError,
     GQLAlchemyUniquenessConstraintError,
 )
-from gqlalchemy.models import (
-    MemgraphConstraintExists,
-    MemgraphConstraintUnique,
-    MemgraphIndex,
-    MemgraphStream,
-    MemgraphTrigger,
-    Node,
-    Relationship,
-)
+
+from gqlalchemy.models.constraints import MemgraphConstraintExists, MemgraphConstraintUnique, MemgraphIndex
+from gqlalchemy.models.node import Node
+from gqlalchemy.models.relationship import Relationship
+from gqlalchemy.models.streams import MemgraphStream, MemgraphTrigger
 from gqlalchemy.vendors.database_client import DatabaseClient
 from gqlalchemy.graph_algorithms.query_modules import QueryModule
 import gqlalchemy.memgraph_constants as mg_consts
@@ -122,8 +118,8 @@ class Memgraph(DatabaseClient):
             host=host, port=port, username=username, password=password, encrypted=encrypted, client_name=client_name
         )
         self._lazy = lazy
-        self._on_disk_db = None
 
+    @override
     def get_indexes(self) -> List[MemgraphIndex]:
         """Returns a list of all database indexes (label and label-property types)."""
         indexes = []
@@ -179,7 +175,7 @@ class Memgraph(DatabaseClient):
 
     def new_connection(self) -> Connection:
         """Creates new Memgraph connection."""
-        args = dict(
+        return MemgraphConnection(
             host=self._host,
             port=self._port,
             username=self._username,
@@ -187,7 +183,6 @@ class Memgraph(DatabaseClient):
             encrypted=self._encrypted,
             client_name=self._client_name,
         )
-        return MemgraphConnection(**args)
 
     def create_stream(self, stream: MemgraphStream) -> None:
         """Create a stream."""
@@ -221,7 +216,7 @@ class Memgraph(DatabaseClient):
         triggers_list = list(self.execute_and_fetch("SHOW TRIGGERS;"))
         memgraph_triggers_list = []
         for trigger in triggers_list:
-            event_type = trigger["event type"]
+            event_type = trigger["event_type"]  # this used to be event type WITH a space
             event_object = None
 
             if event_type == "ANY":
@@ -231,7 +226,7 @@ class Memgraph(DatabaseClient):
 
             memgraph_triggers_list.append(
                 MemgraphTrigger(
-                    name=trigger["trigger name"],
+                    name=trigger["trigger_name"],  # this used to be trigger name WITH a space
                     event_type=event_type,
                     event_object=event_object,
                     execution_phase=trigger["phase"].split()[0],
@@ -252,7 +247,7 @@ class Memgraph(DatabaseClient):
 
     def _new_connection(self) -> Connection:
         """Creates new Memgraph connection."""
-        args = dict(
+        return MemgraphConnection(
             host=self._host,
             port=self._port,
             username=self._username,
@@ -260,7 +255,6 @@ class Memgraph(DatabaseClient):
             encrypted=self._encrypted,
             client_name=self._client_name,
         )
-        return MemgraphConnection(**args)
 
     def init_disk_storage(self, on_disk_db: OnDiskPropertyDatabase) -> None:
         """Adds and OnDiskPropertyDatabase to the database so that any property
@@ -273,7 +267,7 @@ class Memgraph(DatabaseClient):
         """Removes the OnDiskPropertyDatabase from the database."""
         self.on_disk_db = None
 
-    def save_node(self, node: Node) -> Node:
+    def save_node(self, node: Node):
         """Saves node to the database.
         If the node._id is not None it fetches the node with the same id from
         the database and updates it's fields.
@@ -282,9 +276,8 @@ class Memgraph(DatabaseClient):
         Otherwise it creates a new node with the same properties.
         Null properties are ignored.
         """
-        result = None
         if node._id is not None:
-            result = self.save_node_with_id(node)
+            self.save_node_with_id(node)
         elif node.has_unique_fields():
             matching_nodes = list(self._get_nodes_with_unique_fields(node))
             if len(matching_nodes) > 1:
@@ -292,31 +285,34 @@ class Memgraph(DatabaseClient):
                     f"Uniqueness constraints match multiple nodes: {matching_nodes}"
                 )
             elif len(matching_nodes) == 1:
+                # update existing node by internal id
+                assert matching_nodes[0]["node"]._id is not None
                 node._id = matching_nodes[0]["node"]._id
-                result = self.save_node_with_id(node)
+                self.save_node_with_id(node)
             else:
-                result = self.create_node(node)
+                # create non-existing node
+                self.create_node(node)
         else:
-            result = self.create_node(node)
+            self.create_node(node)
 
-        result = self._save_node_properties_on_disk(node, result)
-        return result
+        self._save_node_properties_on_disk(node)
 
-    def _save_node_properties_on_disk(self, node: Node, result: Node) -> Node:
+    def _save_node_properties_on_disk(self, node: Node):
         """Saves all on_disk properties to the on disk database attached to
         the database.
         """
-        for field in node.__fields__:
-            value = getattr(node, field, None)
-            if value is not None and "on_disk" in node.__fields__[field].field_info.extra:
+        if node._id is None:
+            raise GQLAlchemyError("Can't save on_disk properties on a node without an internal graph db id")
+
+        for field_name, value in node._properties.items():
+            metadata = type(node).get_metadata_from_field(field_name)
+            if value is not None and metadata.on_disk:
                 if self.on_disk_db is None:
                     raise GQLAlchemyOnDiskPropertyDatabaseNotDefinedError()
-                self.on_disk_db.save_node_property(result._id, field, value)
-                setattr(result, field, value)
 
-        return result
+                self.on_disk_db.save_node_property(node._id, field_name, value)
 
-    def load_node(self, node: Node) -> Optional[Node]:
+    def load_node(self, node: Node):
         """Loads a node from the database.
         If the node._id is not None it fetches the node from the database with that
         internal id.
@@ -327,11 +323,9 @@ class Memgraph(DatabaseClient):
         If no node is found or no properties are set it raises a GQLAlchemyError.
         """
         if node._id is not None:
-            result = self.load_node_with_id(node)
+            result = self.load_node_with_id(node._id)
         elif node.has_unique_fields():
-            matching_node = self.get_variable_assume_one(
-                query_result=self._get_nodes_with_unique_fields(node), variable_name="node"
-            )
+            matching_node = self.get_first_node(query_result=self._get_nodes_with_unique_fields(node))
             result = matching_node
         else:
             result = self.load_node_with_all_properties(node)
@@ -339,8 +333,26 @@ class Memgraph(DatabaseClient):
         result = self._load_node_properties_on_disk(result)
         return result
 
-    def _load_node_properties_on_disk(self, result: Node) -> Node:
+    def _load_node_properties_on_disk(self, node: Node) -> Node:
         """Loads all on_disk properties from the on disk database."""
+
+        if node._id is None:
+            raise GQLAlchemyError("Can't load on_disk properties on a node without an internal id.")
+
+        for field_name, value in node._properties.items():
+            metadata = type(node).get_metadata_from_field(field_name)
+            if value is not None and metadata is not None:
+                if metadata.on_disk:
+                    if self.on_disk_db is None:
+                        raise GQLAlchemyOnDiskPropertyDatabaseNotDefinedError()
+
+                    try:
+                        new_value = self.on_disk_db.load_node_property(node._id, field_name, value)
+                    except sqlite3.OperationalError:
+                        new_value = value
+                    setattr(node, field_name, new_value)
+
+        """
         for field in result.__fields__:
             value = getattr(result, field, None)
             if "on_disk" in result.__fields__[field].field_info.extra:
@@ -351,10 +363,11 @@ class Memgraph(DatabaseClient):
                 except sqlite3.OperationalError:
                     new_value = value
                 setattr(result, field, new_value)
+        """
 
-        return result
+        return node
 
-    def load_relationship(self, relationship: Relationship) -> Optional[Relationship]:
+    def load_relationship(self, relationship: Relationship) -> Relationship:
         """Returns a relationship loaded from the database.
         If the relationship._id is not None it fetches the relationship from
         the database that has the same internal id.
@@ -365,8 +378,8 @@ class Memgraph(DatabaseClient):
         multiple relationships like that in the database, throws GQLAlchemyError.
         """
         if relationship._id is not None:
-            result = self.load_relationship_with_id(relationship)
-        elif relationship._start_node_id is not None and relationship._end_node_id is not None:
+            result = self.load_relationship_with_id(relationship._id)
+        elif relationship.start_node_id is not None and relationship.end_node_id is not None:
             result = self.load_relationship_with_start_node_id_and_end_node_id(relationship)
         else:
             raise GQLAlchemyError("Can't load a relationship without a start_node_id and end_node_id.")
@@ -380,16 +393,19 @@ class Memgraph(DatabaseClient):
         Memgraph().init_disk_storage() throws a
         GQLAlchemyOnDiskPropertyDatabaseNotDefinedError.
         """
-        for field in result.__fields__:
-            value = getattr(result, field, None)
-            if "on_disk" in result.__fields__[field].field_info.extra:
+        if result._id is None:
+            raise GQLAlchemyError("Can't load on_disk properties on a relationship without an internal id.")
+
+        for field_name, value in result._properties.items():
+            gql_metadata = type(result).get_metadata_from_field(field_name)
+            if gql_metadata.on_disk:
                 if self.on_disk_db is None:
                     raise GQLAlchemyOnDiskPropertyDatabaseNotDefinedError()
                 try:
-                    new_value = self.on_disk_db.load_relationship_property(result._id, field)
+                    new_value = self.on_disk_db.load_relationship_property(result._id, field_name, value)
                 except sqlite3.OperationalError:
                     new_value = value
-                setattr(result, field, new_value)
+                setattr(result, field_name, new_value)
 
         return result
 
@@ -403,7 +419,7 @@ class Memgraph(DatabaseClient):
         """
         if relationship._id is not None:
             result = self.save_relationship_with_id(relationship)
-        elif relationship._start_node_id is not None and relationship._end_node_id is not None:
+        elif relationship.start_node_id is not None and relationship.end_node_id is not None:
             result = self.create_relationship(relationship)
         else:
             raise GQLAlchemyError("Can't create a relationship without start_node_id and end_node_id.")
@@ -416,13 +432,16 @@ class Memgraph(DatabaseClient):
         added with Memgraph().init_disk_storage(db). If OnDiskPropertyDatabase
         is not defined raises GQLAlchemyOnDiskPropertyDatabaseNotDefinedError.
         """
-        for field in relationship.__fields__:
-            value = getattr(relationship, field, None)
-            if value is not None and "on_disk" in relationship.__fields__[field].field_info.extra:
+        if result._id is None:
+            raise GQLAlchemyError("Can't save on_disk properties on a relationship without an internal id.")
+
+        for field_name, value in relationship._properties.items():
+            gql_metadata = type(relationship).get_metadata_from_field(field_name)
+            if gql_metadata.on_disk:
                 if self.on_disk_db is None:
                     raise GQLAlchemyOnDiskPropertyDatabaseNotDefinedError()
-                self.on_disk_db.save_relationship_property(result._id, field, value)
-                setattr(result, field, value)
+                self.on_disk_db.save_relationship_property(result._id, field_name, value)
+                setattr(result, field_name, value)
 
         return result
 

@@ -32,13 +32,8 @@ except ModuleNotFoundError:
 from dacite import from_dict
 
 from gqlalchemy import Memgraph
-from gqlalchemy.models import (
-    MemgraphIndex,
-    MemgraphTrigger,
-    TriggerEventObject,
-    TriggerEventType,
-    TriggerExecutionPhase,
-)
+from gqlalchemy import MemgraphIndex, MemgraphTrigger
+from gqlalchemy.models.streams import TriggerEventObject, TriggerEventType, TriggerExecutionPhase
 from gqlalchemy.query_builders.memgraph_query_builder import Operator, QueryBuilder, Unwind
 from gqlalchemy.transformations.importing.importer import Importer
 

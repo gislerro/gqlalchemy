@@ -21,6 +21,7 @@ from typing import Optional
 import mgclient
 
 from gqlalchemy import Field, GQLAlchemyError, Memgraph, Node, SQLitePropertyDatabase
+from gqlalchemy.models.graph_object import GQLConfig
 
 
 db = Memgraph()
@@ -59,8 +60,8 @@ def _run_n_queries(n: int):
 
 def _create_n_user_objects(n: int) -> None:
     class User(Node):
-        id: Optional[str] = Field(unique=True, index=True, db=db)
-        huge_string: Optional[str] = Field(on_disk=True)
+        id: Optional[str] = Field(GQLConfig(unique=True, index=True, db=db))
+        huge_string: Optional[str] = Field(GQLConfig(on_disk=True))
 
     db = Memgraph()
     SQLitePropertyDatabase("./tests/on_disk_storage.db", db)

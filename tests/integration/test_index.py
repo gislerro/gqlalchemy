@@ -14,8 +14,8 @@
 
 import pytest
 
-from gqlalchemy import Field, Node
-from gqlalchemy.models import MemgraphIndex
+from gqlalchemy import Field, Node, GQLConfig
+from gqlalchemy.models.constraints import MemgraphIndex
 from gqlalchemy.exceptions import GQLAlchemyDatabaseMissingInNodeClassError
 
 
@@ -30,7 +30,7 @@ def test_index_label(memgraph):
 
 def test_index_property(memgraph):
     class Human(Node):
-        id: str = Field(index=True, db=memgraph)
+        id: str = Field(GQLConfig(index=True, db=memgraph))
 
     actual_index = memgraph.get_indexes()
 
@@ -46,7 +46,7 @@ def test_missing_db_in_node_class(memgraph):
 
 def test_db_in_node_class(memgraph):
     class User(Node, db=memgraph):
-        id: str = Field(index=True)
+        id: str = Field(GQLConfig(index=True))
 
     actual_index = memgraph.get_indexes()
     assert set(actual_index) == {MemgraphIndex("User", "id")}
@@ -54,7 +54,7 @@ def test_db_in_node_class(memgraph):
 
 def test_db_in_node_and_property(memgraph):
     class User(Node, db=memgraph):
-        id: str = Field(index=True, db=memgraph)
+        id: str = Field(GQLConfig(index=True, db=memgraph))
 
     actual_index = memgraph.get_indexes()
     assert set(actual_index) == {MemgraphIndex("User", "id")}
@@ -62,7 +62,7 @@ def test_db_in_node_and_property(memgraph):
 
 def test_index_on_label_and_property(memgraph):
     class User(Node, index=True, db=memgraph):
-        id: str = Field(index=True, db=memgraph)
+        id: str = Field(GQLConfig(index=True, db=memgraph))
 
     actual_index = memgraph.get_indexes()
     assert set(actual_index) == {MemgraphIndex("User", "id"), MemgraphIndex("User")}
@@ -94,8 +94,8 @@ def test_false_index_with_db_in_node_class(memgraph):
 
 def test_index_attr(memgraph):
     class Example(Node):
-        first_name: str = Field(index=True, db=memgraph)
-        last_name: str = Field(index=False, db=memgraph)
+        first_name: str = Field(GQLConfig(index=True, db=memgraph))
+        last_name: str = Field(GQLConfig(index=False, db=memgraph))
 
     actual_index = memgraph.get_indexes()
 

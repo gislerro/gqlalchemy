@@ -20,13 +20,9 @@ from gqlalchemy.exceptions import (
     GQLAlchemyError,
     GQLAlchemyUniquenessConstraintError,
 )
-from gqlalchemy.models import (
-    Neo4jConstraintExists,
-    Neo4jConstraintUnique,
-    Neo4jIndex,
-    Node,
-    Relationship,
-)
+from gqlalchemy.models.constraints import Neo4jConstraintExists, Neo4jConstraintUnique, Neo4jIndex
+from gqlalchemy.models.node import Node
+from gqlalchemy.models.relationship import Relationship
 from gqlalchemy.vendors.database_client import DatabaseClient
 
 __all__ = ("Neo4j",)
@@ -73,12 +69,16 @@ class Neo4j(DatabaseClient):
         for result in self.execute_and_fetch("SHOW INDEX;"):
             indexes.append(
                 Neo4jIndex(
-                    result[Neo4jConstants.LABEL][0]
-                    if result[Neo4jConstants.TYPE] != Neo4jConstants.LOOKUP
-                    else result[Neo4jConstants.LABEL],
-                    result[Neo4jConstants.PROPERTIES][0]
-                    if result[Neo4jConstants.TYPE] != Neo4jConstants.LOOKUP
-                    else result[Neo4jConstants.PROPERTIES],
+                    (
+                        result[Neo4jConstants.LABEL][0]
+                        if result[Neo4jConstants.TYPE] != Neo4jConstants.LOOKUP
+                        else result[Neo4jConstants.LABEL]
+                    ),
+                    (
+                        result[Neo4jConstants.PROPERTIES][0]
+                        if result[Neo4jConstants.TYPE] != Neo4jConstants.LOOKUP
+                        else result[Neo4jConstants.PROPERTIES]
+                    ),
                     result[Neo4jConstants.TYPE],
                     result[Neo4jConstants.UNIQUENESS],
                 )
@@ -189,6 +189,7 @@ class Neo4j(DatabaseClient):
         Otherwise it returns the relationship whose relationship._start_node_id
         and relationship._end_node_id and all relationship properties that
         are not None match the relationship in the database.
+
         If there is no relationship like that in the database, or if there are
         multiple relationships like that in the database, throws GQLAlchemyError.
         """

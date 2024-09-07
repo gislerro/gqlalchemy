@@ -1,0 +1,33 @@
+services:
+  neo4j:
+    image: neo4j:latest
+    environment:
+      NEO4J_AUTH: neo4j/neo4j
+      NEO4J_server_bolt_advertised__address: :7688
+  memgraph:
+    image: memgraph/memgraph-mage:latest
+    environment:
+      MEMGRAPH_USERNAME: userodd
+      MEMGRAPH_PASSWORD: pass
+      MEMGRAPH_BOLT_PORT: 7687
+    ports:
+      - 7687:7687
+      - 7444:7444
+  gqlalchemy-dev:
+    build:
+      context: ../ # To allow copy of poetry.lock and pyproject.toml
+      dockerfile: ./.devcontainer/Dockerfile
+    command: bash -c "poetry install && sleep infinity"
+    volumes:
+      - ..:/gqlalchemy
+    working_dir: /gqlalchemy
+    environment:
+      MG_HOST: memgraph
+      MG_PORT: 7687
+      MG_USERNAME: user
+      MG_PASSWORD: pass
+
+      NEO4J_HOST: neo4j
+      NEO4J_PORT: 7688
+      NEO4J_USERNAME: neo4j
+      NEO4J_PASSWORD: neo4j

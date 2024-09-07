@@ -16,7 +16,7 @@ import pytest
 from typing import Optional
 
 from gqlalchemy import Node, Path, Relationship
-from gqlalchemy.models import GraphObject
+from gqlalchemy.models.graph_object import GraphObject
 
 
 def test_simple_json_deserialisation():

@@ -13,26 +13,26 @@
 # limitations under the License.
 
 from gqlalchemy import Field, MemgraphConstraintExists, MemgraphConstraintUnique, Memgraph, Node
+from gqlalchemy.models.graph_object import GQLConfig
 
 db = Memgraph()
 
 
 def test_exists_attr(memgraph_without_dropping_constraints):
     class Person(Node):
-        first_name: str = Field(index=True, db=db)
-        year: int = Field(exists=True, db=db)
-        person_age: int = Field(unique=True, db=db)
-        hair: str = Field(exists=True, db=db)
-        eyes: str = Field(unique=True, db=db)
-        gender: str = Field(exists=True, unique=True, db=db)
-        height: int = Field(unique=True, db=db)
-        weight: int = Field(unique=True, exists=True, db=db)
-        nationality: str = Field(exists=True, unique=True, db=db)
-        state: str = Field(exists=False, unique=False, db=db)
+        first_name: str = Field(GQLConfig(index=True, db=db))
+        year: int = Field(GQLConfig(exists=True, db=db))
+        person_age: int = Field(GQLConfig(unique=True, db=db))
+        hair: str = Field(GQLConfig(exists=True, db=db))
+        eyes: str = Field(GQLConfig(unique=True, db=db))
+        gender: str = Field(GQLConfig(exists=True, unique=True, db=db))
+        height: int = Field(GQLConfig(unique=True, db=db))
+        weight: int = Field(GQLConfig(unique=True, exists=True, db=db))
+        nationality: str = Field(GQLConfig(exists=True, unique=True, db=db))
+        state: str = Field(GQLConfig(exists=False, unique=False, db=db))
 
     exists_constraints = {
         MemgraphConstraintExists("Person", "year"),
-        MemgraphConstraintExists("Person", "gender"),
         MemgraphConstraintExists("Person", "hair"),
         MemgraphConstraintExists("Person", "gender"),
         MemgraphConstraintExists("Person", "weight"),
@@ -44,16 +44,16 @@ def test_exists_attr(memgraph_without_dropping_constraints):
 
 def test_unique_attr(memgraph_without_dropping_constraints):
     class Person(Node):
-        first_name: str = Field(index=True, db=db)
-        year: int = Field(exists=True, db=db)
-        person_age: int = Field(unique=True, db=db)
-        hair: str = Field(exists=True, db=db)
-        eyes: str = Field(unique=True, db=db)
-        gender: str = Field(exists=True, unique=True, db=db)
-        height: int = Field(unique=True, db=db)
-        weight: int = Field(unique=True, exists=True, db=db)
-        nationality: str = Field(exists=True, unique=True, db=db)
-        state: str = Field(exists=False, unique=False, db=db)
+        first_name: str = Field(GQLConfig(index=True, db=db))
+        year: int = Field(GQLConfig(exists=True, db=db))
+        person_age: int = Field(GQLConfig(unique=True, db=db))
+        hair: str = Field(GQLConfig(exists=True, db=db))
+        eyes: str = Field(GQLConfig(unique=True, db=db))
+        gender: str = Field(GQLConfig(exists=True, unique=True, db=db))
+        height: int = Field(GQLConfig(unique=True, db=db))
+        weight: int = Field(GQLConfig(unique=True, exists=True, db=db))
+        nationality: str = Field(GQLConfig(exists=True, unique=True, db=db))
+        state: str = Field(GQLConfig(exists=False, unique=False, db=db))
 
     unique_constraints = {
         MemgraphConstraintUnique("Person", ("person_age",)),
@@ -63,6 +63,7 @@ def test_unique_attr(memgraph_without_dropping_constraints):
         MemgraphConstraintUnique("Person", ("weight",)),
         MemgraphConstraintUnique("Person", ("nationality",)),
     }
+
     actual_unique_constraints = memgraph_without_dropping_constraints.get_unique_constraints()
     assert set(actual_unique_constraints) == unique_constraints
 

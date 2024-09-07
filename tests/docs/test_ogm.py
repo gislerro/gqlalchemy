@@ -14,50 +14,64 @@
 
 from typing import Optional
 
-from gqlalchemy import Memgraph, Node, Relationship, Field, match
+from gqlalchemy import Memgraph, Node, Field, GQLConfig, match
+from gqlalchemy.models.relationship import Relationship
 from gqlalchemy.query_builders.memgraph_query_builder import Operator
 
 db = Memgraph()
 
 
-class UserSave(Node):
-    id: str = Field(index=True, exist=True, unique=True, db=db)
-    username: str = Field(index=True, exist=True, unique=True, db=db)
+all = GQLConfig(index=True, exists=True, unique=True)
+index_unique = GQLConfig(index=True, unique=True)
+unique = GQLConfig(unique=True)
 
 
-class UserMap(Node):
-    id: str = Field(index=True, exist=True, unique=True, db=db)
+# opaque node class, sets the db attribute for all subclasses
+class MemgraphNode(Node, db=db, opaque=True):
+    pass
+
+
+# https://docs.pydantic.dev/2.9/migration/#required-optional-and-nullable-fields
+
+
+class UserSave(MemgraphNode):
+    id: str = Field(all)
+    username: str = Field(all)
+
+
+class UserMap(MemgraphNode):
+    id: str = Field(all)
 
 
 class Streamer(UserMap):
-    id: str = Field(index=True, exist=True, unique=True, db=db)
-    username: Optional[str] = Field(index=True, exist=True, unique=True, db=db)
-    url: Optional[str] = Field()
-    followers: Optional[int] = Field()
-    createdAt: Optional[str] = Field()
-    totalViewCount: Optional[int] = Field()
-    description: Optional[str] = Field()
+    id: str = Field(all)
+    username: str = Field(all)
+    url: Optional[str] = Field(None, None)
+    followers: Optional[int] = Field(None, None)
+    createdAt: Optional[str] = Field(None, None)
+    totalViewCount: Optional[int] = Field(None, None)
+    description: Optional[str] = Field(None, None)
 
 
-class StreamerLoad(Node):
-    id: str = Field(index=True, unique=True, db=db)
-    name: Optional[str] = Field(index=True, exists=True, unique=True, db=db)
+class StreamerLoad(MemgraphNode):
+    id: str = Field(index_unique)
+    name: Optional[str] = Field(all, None)
 
 
-class Team(Node):
-    name: str = Field(unique=True, db=db)
+class Team(MemgraphNode):
+    name: str = Field(unique)
 
 
 class IsPartOf(Relationship, type="IS_PART_OF"):
-    date: Optional[str] = Field()
+    date: Optional[str] = Field(None, None)
 
 
-class Language(Node):
-    name: str = Field(unique=True, db=db)
+class Language(MemgraphNode):
+    name: str = Field(unique)
 
 
 class ChatsWith(Relationship, type="CHATS_WITH"):
-    lastChatted: Optional[str] = Field()
+    lastChatted: Optional[str] = Field(None, None)
 
 
 class Speaks(Relationship, type="SPEAKS"):
@@ -115,14 +129,14 @@ class TestMapNodesAndRelationships:
             totalViewCount=6666,
             description="Hi, I am streamer!",
         ).save(db)
-        chats_with = ChatsWith(
-            _start_node_id=streamer_1._id, _end_node_id=streamer_2._id, lastChatted="2021-04-25"
-        ).save(db)
+        chats_with = ChatsWith(start_node_id=streamer_1._id, end_node_id=streamer_2._id, lastChatted="2021-04-25").save(
+            db
+        )
 
         result = next(match().node().to("CHATS_WITH", variable="c").node().return_().execute())["c"]
 
-        assert result._start_node_id == streamer_1._id
-        assert result._end_node_id == streamer_2._id
+        assert result.start_node_id == streamer_1._id
+        assert result.end_node_id == streamer_2._id
         assert result.lastChatted == chats_with.lastChatted
         assert result._type == chats_with._type
 
@@ -171,9 +185,10 @@ class TestSaveNodesAndRelationships:
 
     def test_relationship_saving_1(self):
         user = UserSave(id="55", username="Jimmy").save(db)
+
         language = Language(name="ko").save(db)
 
-        speaks_rel = Speaks(_start_node_id=user._id, _end_node_id=language._id).save(db)
+        speaks_rel = Speaks(start_node_id=user._id, end_node_id=language._id).save(db)
 
         result = next(match().node().to("SPEAKS", variable="s").node().return_().execute())["s"]
 
@@ -185,7 +200,7 @@ class TestSaveNodesAndRelationships:
         user = UserSave(id="35", username="Jessica").save(db)
         language = Language(name="de").save(db)
 
-        speaks_rel = SpeaksTemp(_start_node_id=user._id, _end_node_id=language._id)
+        speaks_rel = SpeaksTemp(start_node_id=user._id, end_node_id=language._id)
         db.save_relationship(speaks_rel)
 
         result = next(match().node().to("SPEAKSTEMP", variable="s").node().return_().execute())["s"]
@@ -196,6 +211,7 @@ class TestSaveNodesAndRelationships:
 
 
 class TestLoadNodesAndRelationships:
+
     def test_node_load(self):
         streamer = StreamerLoad(name="Jack", id="54").save(db)
         team = Team(name="Warriors").save(db)
@@ -205,13 +221,13 @@ class TestLoadNodesAndRelationships:
 
         assert streamer.name == loaded_streamer.name
         assert streamer.id == loaded_streamer.id
-        assert streamer._labels == {"StreamerLoad"}
+        assert streamer._labels == "StreamerLoad"
         assert streamer._labels == loaded_streamer._labels
         assert team.name == loaded_team.name
-        assert team._labels == {"Team"}
+        assert team._labels == "Team"
         assert team._labels == loaded_team._labels
 
-        is_part_of = IsPartOf(_start_node_id=loaded_streamer._id, _end_node_id=loaded_team._id, date="2021-04-26").save(
+        is_part_of = IsPartOf(start_node_id=loaded_streamer._id, end_node_id=loaded_team._id, date="2021-04-26").save(
             db
         )
 
@@ -224,8 +240,9 @@ class TestLoadNodesAndRelationships:
     def test_relationship_load(self):
         streamer = StreamerLoad(name="Hayley", id="36").save(db)
         team = Team(name="Lakers").save(db)
-        is_part_of = IsPartOf(_start_node_id=streamer._id, _end_node_id=team._id, date="2021-04-20").save(db)
-        loaded_is_part_of = IsPartOf(_start_node_id=streamer._id, _end_node_id=team._id).load(db)
+        is_part_of = IsPartOf(start_node_id=streamer._id, end_node_id=team._id, date="2021-04-20").save(db)
+
+        loaded_is_part_of = IsPartOf(start_node_id=streamer._id, end_node_id=team._id).load(db)
 
         assert loaded_is_part_of._type == "IS_PART_OF"
         assert loaded_is_part_of._type == is_part_of._type

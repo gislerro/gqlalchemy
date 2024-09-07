@@ -33,17 +33,14 @@ from gqlalchemy.memgraph_constants import (
     MG_CLIENT_NAME,
     MG_LAZY,
 )
-from gqlalchemy.models import Node, Relationship
 from gqlalchemy.utilities import to_cypher_properties
-from gqlalchemy import Memgraph, Match
+from gqlalchemy import Memgraph, Match, Node, Relationship
 
 
 class Translator(ABC):
     # Lambda function to concat list of labels
-    merge_labels: Callable[[Set[str]], str] = (
-        lambda labels, default_node_label: LABELS_CONCAT.join([label for label in sorted(labels)])
-        if len(labels)
-        else default_node_label
+    merge_labels: Callable[[Set[str]], str] = lambda labels, default_node_label: (
+        LABELS_CONCAT.join([label for label in sorted(labels)]) if len(labels) else default_node_label
     )
 
     @abstractmethod

@@ -66,6 +66,7 @@ def test_start_and_connect_memgraph_without_docker_config(memgraph_instance_dock
     assert list(memgraph.execute_and_fetch("RETURN 100 AS result"))[0]["result"] == 100
 
 
+@pytest.mark.extras
 @pytest.mark.ubuntu
 def test_start_and_connect_memgraph_binary():
     path = pathlib.Path().resolve() / "memgraph_one"
@@ -82,6 +83,7 @@ def test_start_and_connect_memgraph_binary():
     os.system(f"rm -rf {path}")
 
 
+@pytest.mark.extras
 @pytest.mark.ubuntu
 def test_start_and_connect_memgraph_binary_config():
     path = pathlib.Path().resolve() / "memgraph_two/"
@@ -98,6 +100,7 @@ def test_start_and_connect_memgraph_binary_config():
     os.system(f"rm -rf {path}")
 
 
+@pytest.mark.extras
 @pytest.mark.ubuntu
 def test_start_memgraph_binary_connect():
     path = pathlib.Path().resolve() / "memgraph_three"

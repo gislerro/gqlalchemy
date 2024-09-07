@@ -15,7 +15,7 @@
 import pytest
 
 from gqlalchemy import Memgraph, MemgraphTrigger
-from gqlalchemy.models import TriggerEventObject, TriggerEventType, TriggerExecutionPhase
+from gqlalchemy.models.streams import TriggerEventObject, TriggerEventType, TriggerExecutionPhase
 
 
 @pytest.fixture

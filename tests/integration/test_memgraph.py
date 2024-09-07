@@ -32,8 +32,8 @@ def compare_edges(actual: List[Relationship], expected: List[Relationship]):
 
     for index, actual_object in enumerate(actual):
         assert actual_object._properties == expected[index]._properties
-        assert actual_object._start_node_id is not None
-        assert actual_object._end_node_id is not None
+        assert actual_object.start_node_id is not None
+        assert actual_object.end_node_id is not None
         # assert actual_object.end_node.properties["id"] == expected[index].end_node.properties["id"]
 
 
@@ -73,24 +73,24 @@ def test_edges_mapping(populated_memgraph: Memgraph):
         Relationship(
             _id=0,
             _type="Relation",
-            _start_node_id=0,
-            _end_node_id=1,
+            start_node_id=0,
+            end_node_id=1,
             id=0,
             name="name1",
         ),
         Relationship(
             _id=1,
             _type="Relation",
-            _start_node_id=1,
-            _end_node_id=2,
+            start_node_id=1,
+            end_node_id=2,
             id=1,
             num=100,
         ),
         Relationship(
             _id=2,
             _type="Relation",
-            _start_node_id=2,
-            _end_node_id=0,
+            start_node_id=2,
+            end_node_id=0,
             id=2,
             data=[1, 2, 3],
         ),
@@ -114,22 +114,22 @@ def test_path_mapping(populated_memgraph: Memgraph):
         Relationship(
             _id=0,
             _type="Relation",
-            _start_node_id=0,
-            _end_node_id=1,
+            start_node_id=0,
+            end_node_id=1,
             id=0,
         ),
         Relationship(
             _id=1,
             _type="Relation",
-            _start_node_id=1,
-            _end_node_id=2,
+            start_node_id=1,
+            end_node_id=2,
             id=1,
         ),
         Relationship(
             _id=2,
             _type="Relation",
-            _start_node_id=2,
-            _end_node_id=3,
+            start_node_id=2,
+            end_node_id=3,
             id=2,
         ),
     ]

@@ -13,19 +13,31 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, Dict, Iterator, List, Optional, TypedDict, cast
 
 from gqlalchemy.connection import Connection
+from gqlalchemy.disk_storage import OnDiskPropertyDatabase
 from gqlalchemy.exceptions import GQLAlchemyError
-from gqlalchemy.models import (
-    Constraint,
-    Index,
-    Node,
-    Relationship,
-)
+from gqlalchemy.models.constraints import Constraint, Index
+from gqlalchemy.models.node import Node
+from gqlalchemy.models.relationship import Relationship
+from gqlalchemy.models.streams import TriggerEventType, TriggerExecutionPhase
+
+
+class DatabaseQueryResult(TypedDict):
+    node: Node
+    relationship: Relationship
+
+    event_type: TriggerEventType
+    trigger_name: str
+    phase: TriggerExecutionPhase
+    statement: str
 
 
 class DatabaseClient(ABC):
+
+    on_disk_db: OnDiskPropertyDatabase | None = None
+
     def __init__(
         self,
         host: str,
@@ -52,23 +64,23 @@ class DatabaseClient(ABC):
         return self._port
 
     def execute_and_fetch(
-        self, query: str, parameters: Dict[str, Any] = {}, connection: Connection = None
-    ) -> Iterator[Dict[str, Any]]:
+        self, query: str, parameters: Dict[str, Any] = {}, connection: Optional[Connection] = None
+    ) -> Iterator[DatabaseQueryResult]:
         """Executes Cypher query and returns iterator of results."""
         connection = connection or self._get_cached_connection()
-        return connection.execute_and_fetch(query, parameters)
+        return cast(Iterator[DatabaseQueryResult], connection.execute_and_fetch(query, parameters))
 
-    def execute(self, query: str, parameters: Dict[str, Any] = {}, connection: Connection = None) -> None:
+    def execute(self, query: str, parameters: Dict[str, Any] = {}, connection: Optional[Connection] = None):
         """Executes Cypher query without returning any results."""
         connection = connection or self._get_cached_connection()
         connection.execute(query, parameters)
 
-    def create_index(self, index: Index) -> None:
+    def create_index(self, index: Index):
         """Creates an index (label or label-property type) in the database."""
         query = f"CREATE INDEX ON {index.to_cypher()};"
         self.execute(query)
 
-    def drop_index(self, index: Index) -> None:
+    def drop_index(self, index: Index):
         """Drops an index (label or label-property type) in the database."""
         query = f"DROP INDEX ON {index.to_cypher()};"
         self.execute(query)
@@ -119,7 +131,7 @@ class DatabaseClient(ABC):
     def ensure_constraints(
         self,
         constraints: List[Constraint],
-    ) -> None:
+    ):
         """Ensures that database constraints match input constraints."""
         old_constraints = set(self.get_constraints())
         new_constraints = set(constraints)
@@ -132,7 +144,7 @@ class DatabaseClient(ABC):
         """Drops database by removing all nodes and edges."""
         self.execute("MATCH (n) DETACH DELETE n;")
 
-    def _get_cached_connection(self) -> Connection:
+    def _get_cached_connection(self):
         """Returns cached connection if it exists, creates it otherwise."""
         if self._cached_connection is None or not self._cached_connection.is_active():
             self._cached_connection = self.new_connection()
@@ -144,18 +156,17 @@ class DatabaseClient(ABC):
         """Creates new database connection."""
         pass
 
-    def _get_nodes_with_unique_fields(self, node: Node) -> Optional[Node]:
+    def _get_nodes_with_unique_fields(self, node: Node):
         """Get's all nodes from the database that have any of the unique fields
         set to the values in the `node` object.
         """
-        return self.execute_and_fetch(
-            f"MATCH (node: {node._label})" f" WHERE {node._get_cypher_unique_fields_or_block('node')}" f" RETURN node;"
-        )
+        block = node._get_cypher_unique_fields_or_block("node")
+        return self.execute_and_fetch(f"MATCH (node: {node._label})" f" WHERE {block}" f" RETURN node;")
 
-    def get_variable_assume_one(self, query_result: Iterator[Dict[str, Any]], variable_name: str) -> Any:
-        """Returns a single result from the query_result (usually gotten from
+    def get_first_node(self, query_result: Iterator[DatabaseQueryResult]):
+        """Returns the first node from the query_result (usually gotten from
         the execute_and_fetch function).
-        If there is more than one result, raises a GQLAlchemyError.
+        If there is no result, returns None.
         """
         result = next(query_result, None)
         next_result = next(query_result, None)
@@ -165,20 +176,42 @@ class DatabaseClient(ABC):
             raise GQLAlchemyError(
                 f"One result expected, but more than one result found. First result: {result}, second result: {next_result}"
             )
-        elif variable_name not in result:
-            raise GQLAlchemyError(f"Variable name {variable_name} not present in result.")
 
-        return result[variable_name]
+        if "node" not in result:
+            raise GQLAlchemyError("Variable name node not present in DatabaseQueryResult.")
 
-    def create_node(self, node: Node) -> Optional[Node]:
+        return result["node"]
+
+    def get_first_relationship(self, query_result: Iterator[DatabaseQueryResult]):
+        """Returns the first relationship from the query_result (usually gotten from
+        the execute_and_fetch function).
+        If there is no result, returns None.
+        """
+        result = next(query_result, None)
+        next_result = next(query_result, None)
+        if result is None:
+            raise GQLAlchemyError("No result found. Result list is empty.")
+        elif next_result is not None:
+            raise GQLAlchemyError(
+                f"One result expected, but more than one result found. First result: {result}, second result: {next_result}"
+            )
+
+        if "relationship" not in result:
+            raise GQLAlchemyError("Variable name relationship not present in DatabaseQueryResult.")
+
+        return result["relationship"]
+
+    def create_node(self, node: Node) -> Node:
         """Creates a node in database from the `node` object."""
         results = self.execute_and_fetch(
             f"CREATE (node:{node._label}) {node._get_cypher_set_properties('node')} RETURN node;"
         )
-        return self.get_variable_assume_one(results, "node")
+        first = self.get_first_node(results)
+        node._id = first._id
+        return node
 
     @abstractmethod
-    def save_node(self, node: Node) -> Node:
+    def save_node(self, node: Node) -> None:
         """Saves node to database.
         If the node._id is not None, it fetches the node with the same id from
         the database and updates it's fields.
@@ -192,21 +225,19 @@ class DatabaseClient(ABC):
     def save_nodes(self, nodes: List[Node]) -> None:
         """Saves a list of nodes to the database."""
         for i in range(len(nodes)):
-            nodes[i]._id = self.save_node(nodes[i])._id
+            self.save_node(nodes[i])
 
-    def save_node_with_id(self, node: Node) -> Optional[Node]:
+    def save_node_with_id(self, node: Node) -> None:
         """Saves a node to the database using the internal id."""
-        results = self.execute_and_fetch(
+        self.execute_and_fetch(
             f"MATCH (node: {node._label})"
             f" WHERE id(node) = {node._id}"
             f" {node._get_cypher_set_properties('node')}"
             f" RETURN node;"
         )
 
-        return self.get_variable_assume_one(results, "node")
-
     @abstractmethod
-    def load_node(self, node: Node) -> Optional[Node]:
+    def load_node(self, node: Node) -> Node:
         """Loads a node from the database.
         If the node._id is not None, it fetches the node from the database with that
         internal id.
@@ -218,21 +249,20 @@ class DatabaseClient(ABC):
         """
         pass
 
-    def load_node_with_all_properties(self, node: Node) -> Optional[Node]:
+    def load_node_with_all_properties(self, node: Node) -> Node:
         """Loads a node from the database with all equal property values."""
         results = self.execute_and_fetch(
             f"MATCH (node: {node._label}) WHERE {node._get_cypher_fields_and_block('node')} RETURN node;"
         )
-        return self.get_variable_assume_one(results, "node")
+        return self.get_first_node(results)
 
-    def load_node_with_id(self, node: Node) -> Optional[Node]:
+    def load_node_with_id(self, id: int) -> Node:
         """Loads a node with the same internal database id."""
-        results = self.execute_and_fetch(f"MATCH (node: {node._label}) WHERE id(node) = {node._id} RETURN node;")
-
-        return self.get_variable_assume_one(results, "node")
+        results = self.execute_and_fetch(f"MATCH (node) WHERE id(node) = {id} RETURN node;")
+        return self.get_first_node(results)
 
     @abstractmethod
-    def load_relationship(self, relationship: Relationship) -> Optional[Relationship]:
+    def load_relationship(self, relationship: Relationship) -> Relationship:
         """Returns a relationship loaded from the database.
         If the relationship._id is not None, it fetches the relationship from
         the database that has the same internal id.
@@ -244,20 +274,12 @@ class DatabaseClient(ABC):
         """
         pass
 
-    def load_relationship_with_id(self, relationship: Relationship) -> Optional[Relationship]:
+    def load_relationship_with_id(self, id: int) -> Relationship:
         """Loads a relationship from the database using the internal id."""
-        results = self.execute_and_fetch(
-            f"MATCH (start_node)-[relationship: {relationship._type}]->(end_node)"
-            f" WHERE id(start_node) = {relationship._start_node_id}"
-            f" AND id(end_node) = {relationship._end_node_id}"
-            f" AND id(relationship) = {relationship._id}"
-            f" RETURN relationship;"
-        )
-        return self.get_variable_assume_one(results, "relationship")
+        results = self.execute_and_fetch(f"MATCH (rel)" f"WHERE ID(rel) = {id}" f" RETURN relationship;")
+        return self.get_first_relationship(results)
 
-    def load_relationship_with_start_node_id_and_end_node_id(
-        self, relationship: Relationship
-    ) -> Optional[Relationship]:
+    def load_relationship_with_start_node_id_and_end_node_id(self, relationship: Relationship):
         """Loads a relationship from the database using start node and end node id
         for which all properties of the relationship that are not None match.
         """
@@ -270,10 +292,10 @@ class DatabaseClient(ABC):
             f" AND id(end_node) = {relationship._end_node_id}"
             f"{and_block} RETURN relationship;"
         )
-        return self.get_variable_assume_one(results, "relationship")
+        return self.get_first_relationship(results)
 
     @abstractmethod
-    def save_relationship(self, relationship: Relationship) -> Optional[Relationship]:
+    def save_relationship(self, relationship: Relationship):
         """Saves a relationship to the database.
         If relationship._id is not None it finds the relationship in the database
         and updates it's properties with the values in `relationship`.
@@ -288,7 +310,7 @@ class DatabaseClient(ABC):
         for i in range(len(relationships)):
             relationships[i]._id = self.save_relationship(relationships[i])._id
 
-    def save_relationship_with_id(self, relationship: Relationship) -> Optional[Relationship]:
+    def save_relationship_with_id(self, relationship: Relationship):
         """Saves a relationship to the database using the relationship._id."""
         results = self.execute_and_fetch(
             f"MATCH (start_node)-[relationship: {relationship._type}]->(end_node)"
@@ -298,9 +320,9 @@ class DatabaseClient(ABC):
             f"{relationship._get_cypher_set_properties('relationship')} RETURN relationship;"
         )
 
-        return self.get_variable_assume_one(results, "relationship")
+        return self.get_first_relationship(results)
 
-    def create_relationship(self, relationship: Relationship) -> Optional[Relationship]:
+    def create_relationship(self, relationship: Relationship):
         """Creates a new relationship in the database."""
         results = self.execute_and_fetch(
             "MATCH (start_node), (end_node)"
@@ -310,4 +332,4 @@ class DatabaseClient(ABC):
             f"{relationship._get_cypher_set_properties('relationship')} RETURN relationship"
         )
 
-        return self.get_variable_assume_one(results, "relationship")
+        return self.get_first_relationship(results)

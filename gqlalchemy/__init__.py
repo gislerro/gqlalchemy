@@ -14,22 +14,21 @@
 
 import warnings
 
-from pydantic.v1 import validator  # noqa F401
+from pydantic import validator  # noqa F401
 
-from gqlalchemy.models import (  # noqa F401
+from gqlalchemy.models.constraints import (  # noqa F401
+    MemgraphIndex,
     MemgraphConstraintExists,
     MemgraphConstraintUnique,
-    MemgraphIndex,
-    MemgraphKafkaStream,
-    MemgraphPulsarStream,
-    MemgraphTrigger,
-    Neo4jConstraintUnique,
     Neo4jIndex,
-    Node,
-    Path,
-    Relationship,
-    Field,
+    Neo4jConstraintUnique,
 )
+from gqlalchemy.models.streams import MemgraphKafkaStream, MemgraphPulsarStream, MemgraphTrigger  # noqa F401
+from gqlalchemy.models.node import Node  # noqa F401
+from gqlalchemy.models.relationship import Relationship  # noqa F401
+from gqlalchemy.models.path import Path  # noqa F401
+from gqlalchemy.models.graph_object import Field, GQLConfig  # noqa F401
+
 from gqlalchemy.disk_storage import SQLitePropertyDatabase  # noqa F401
 from gqlalchemy.instance_runner import (  # noqa F401
     DockerImage,
@@ -61,6 +60,10 @@ from gqlalchemy.query_builders.memgraph_query_builder import LoadCsv, QueryBuild
 from gqlalchemy.query_builders.neo4j_query_builder import Neo4jQueryBuilder  # noqa F401
 from gqlalchemy.vendors.memgraph import Memgraph  # noqa F401
 from gqlalchemy.vendors.neo4j import Neo4j  # noqa F401
+
+from gqlalchemy.models.node import Node  # noqa F401
+from gqlalchemy.models.relationship import Relationship  # noqa F401
+from gqlalchemy.models.path import Path  # noqa F401
 
 warnings.filterwarnings("once", category=GQLAlchemyWarning)
 __all__ = ["Memgraph"]

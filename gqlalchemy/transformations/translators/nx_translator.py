@@ -20,10 +20,9 @@ import networkx as nx
 import mgclient
 
 
-from gqlalchemy import Memgraph
+from gqlalchemy import Memgraph, Node, Relationship, MemgraphIndex
 from gqlalchemy.transformations.constants import LABEL, EDGE_TYPE, DEFAULT_EDGE_TYPE, DEFAULT_NODE_LABEL
 from gqlalchemy.transformations.translators.translator import Translator
-from gqlalchemy.models import Node, Relationship, MemgraphIndex
 from gqlalchemy.utilities import NetworkXCypherConfig, to_cypher_labels, to_cypher_properties, to_cypher_value
 from gqlalchemy.memgraph_constants import (
     MG_HOST,

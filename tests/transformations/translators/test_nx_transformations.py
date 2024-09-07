@@ -14,15 +14,15 @@
 
 import pytest
 
-import networkx as nx
+import networkx as nx  # type: ignore[import-untyped]
 
+from gqlalchemy import Node, Relationship
 from gqlalchemy.transformations.translators.nx_translator import (
     NxTranslator,
     NoNetworkXConfigException,
     NetworkXCypherBuilder,
 )
 from gqlalchemy.transformations.translators.translator import Translator
-from gqlalchemy.models import Node, Relationship
 from gqlalchemy.transformations.constants import LABEL, EDGE_TYPE, DEFAULT_NODE_LABEL, DEFAULT_EDGE_TYPE
 from gqlalchemy.utilities import NetworkXCypherConfig
 from tests.transformations.common import execute_queries
@@ -70,18 +70,18 @@ def _check_nx_graph_structure(
 
 def test_export_simple_graph(memgraph):
     queries = []
-    queries.append(f"CREATE (m:Node {{id: 1}})")
-    queries.append(f"CREATE (m:Node {{id: 2}})")
-    queries.append(f"CREATE (m:Node {{id: 3}})")
-    queries.append(f"CREATE (m:Node {{id: 4}})")
-    queries.append(f"MATCH (n:Node {{id: 1}}), (m:Node {{id: 2}}) CREATE (n)-[r:CONNECTION {{edge_id: 1}}]->(m)")
-    queries.append(f"MATCH (n:Node {{id: 2}}), (m:Node {{id: 3}}) CREATE (n)-[r:CONNECTION {{edge_id: 2}}]->(m)")
-    queries.append(f"MATCH (n:Node {{id: 3}}), (m:Node {{id: 4}}) CREATE (n)-[r:CONNECTION {{edge_id: 3}}]->(m)")
-    queries.append(f"MATCH (n:Node {{id: 4}}), (m:Node {{id: 1}}) CREATE (n)-[r:CONNECTION {{edge_id: 4}}]->(m)")
-    queries.append(f"MATCH (n:Node {{id: 1}}), (m:Node {{id: 3}}) CREATE (n)-[r:CONNECTION {{edge_id: 5}}]->(m)")
-    queries.append(f"MATCH (n:Node {{id: 2}}), (m:Node {{id: 4}}) CREATE (n)-[r:CONNECTION {{edge_id: 6}}]->(m)")
-    queries.append(f"MATCH (n:Node {{id: 4}}), (m:Node {{id: 2}}) CREATE (n)-[r:CONNECTION {{edge_id: 7}}]->(m)")
-    queries.append(f"MATCH (n:Node {{id: 3}}), (m:Node {{id: 1}}) CREATE (n)-[r:CONNECTION {{edge_id: 8}}]->(m)")
+    queries.append("CREATE (m:Node {id: 1})")
+    queries.append("CREATE (m:Node {id: 2})")
+    queries.append("CREATE (m:Node {id: 3})")
+    queries.append("CREATE (m:Node {id: 4})")
+    queries.append("MATCH (n:Node {id: 1}), (m:Node {id: 2}) CREATE (n)-[r:CONNECTION {edge_id: 1}]->(m)")
+    queries.append("MATCH (n:Node {id: 2}), (m:Node {id: 3}) CREATE (n)-[r:CONNECTION {edge_id: 2}]->(m)")
+    queries.append("MATCH (n:Node {id: 3}), (m:Node {id: 4}) CREATE (n)-[r:CONNECTION {edge_id: 3}]->(m)")
+    queries.append("MATCH (n:Node {id: 4}), (m:Node {id: 1}) CREATE (n)-[r:CONNECTION {edge_id: 4}]->(m)")
+    queries.append("MATCH (n:Node {id: 1}), (m:Node {id: 3}) CREATE (n)-[r:CONNECTION {edge_id: 5}]->(m)")
+    queries.append("MATCH (n:Node {id: 2}), (m:Node {id: 4}) CREATE (n)-[r:CONNECTION {edge_id: 6}]->(m)")
+    queries.append("MATCH (n:Node {id: 4}), (m:Node {id: 2}) CREATE (n)-[r:CONNECTION {edge_id: 7}]->(m)")
+    queries.append("MATCH (n:Node {id: 3}), (m:Node {id: 1}) CREATE (n)-[r:CONNECTION {edge_id: 8}]->(m)")
     execute_queries(memgraph, queries)
     # Translate to DGL graph
     translator = NxTranslator()
@@ -94,20 +94,20 @@ def test_export_simple_graph(memgraph):
 
 def test_export_simple_graph_isolated_nodes(memgraph):
     queries = []
-    queries.append(f"CREATE (m:Node {{id: 1}})")
-    queries.append(f"CREATE (m:Node {{id: 2}})")
-    queries.append(f"CREATE (m:Node {{id: 3}})")
-    queries.append(f"CREATE (m:Node {{id: 4}})")
-    queries.append(f"CREATE (m:Node {{id: 5}})")  # isolated node
-    queries.append(f"CREATE (m:Node {{id: 6}})")  # isolated node
-    queries.append(f"MATCH (n:Node {{id: 1}}), (m:Node {{id: 2}}) CREATE (n)-[r:CONNECTION {{edge_id: 1}}]->(m)")
-    queries.append(f"MATCH (n:Node {{id: 2}}), (m:Node {{id: 3}}) CREATE (n)-[r:CONNECTION {{edge_id: 2}}]->(m)")
-    queries.append(f"MATCH (n:Node {{id: 3}}), (m:Node {{id: 4}}) CREATE (n)-[r:CONNECTION {{edge_id: 3}}]->(m)")
-    queries.append(f"MATCH (n:Node {{id: 4}}), (m:Node {{id: 1}}) CREATE (n)-[r:CONNECTION {{edge_id: 4}}]->(m)")
-    queries.append(f"MATCH (n:Node {{id: 1}}), (m:Node {{id: 3}}) CREATE (n)-[r:CONNECTION {{edge_id: 5}}]->(m)")
-    queries.append(f"MATCH (n:Node {{id: 2}}), (m:Node {{id: 4}}) CREATE (n)-[r:CONNECTION {{edge_id: 6}}]->(m)")
-    queries.append(f"MATCH (n:Node {{id: 4}}), (m:Node {{id: 2}}) CREATE (n)-[r:CONNECTION {{edge_id: 7}}]->(m)")
-    queries.append(f"MATCH (n:Node {{id: 3}}), (m:Node {{id: 1}}) CREATE (n)-[r:CONNECTION {{edge_id: 8}}]->(m)")
+    queries.append("CREATE (m:Node {id: 1})")
+    queries.append("CREATE (m:Node {id: 2})")
+    queries.append("CREATE (m:Node {id: 3})")
+    queries.append("CREATE (m:Node {id: 4})")
+    queries.append("CREATE (m:Node {id: 5})")  # isolated node
+    queries.append("CREATE (m:Node {id: 6})")  # isolated node
+    queries.append("MATCH (n:Node {id: 1}), (m:Node {id: 2}) CREATE (n)-[r:CONNECTION {edge_id: 1}]->(m)")
+    queries.append("MATCH (n:Node {id: 2}), (m:Node {id: 3}) CREATE (n)-[r:CONNECTION {edge_id: 2}]->(m)")
+    queries.append("MATCH (n:Node {id: 3}), (m:Node {id: 4}) CREATE (n)-[r:CONNECTION {edge_id: 3}]->(m)")
+    queries.append("MATCH (n:Node {id: 4}), (m:Node {id: 1}) CREATE (n)-[r:CONNECTION {edge_id: 4}]->(m)")
+    queries.append("MATCH (n:Node {id: 1}), (m:Node {id: 3}) CREATE (n)-[r:CONNECTION {edge_id: 5}]->(m)")
+    queries.append("MATCH (n:Node {id: 2}), (m:Node {id: 4}) CREATE (n)-[r:CONNECTION {edge_id: 6}]->(m)")
+    queries.append("MATCH (n:Node {id: 4}), (m:Node {id: 2}) CREATE (n)-[r:CONNECTION {edge_id: 7}]->(m)")
+    queries.append("MATCH (n:Node {id: 3}), (m:Node {id: 1}) CREATE (n)-[r:CONNECTION {edge_id: 8}]->(m)")
     execute_queries(memgraph, queries)
     # Translate to DGL graph
     translator = NxTranslator()
@@ -121,19 +121,19 @@ def test_nx_export_graph_no_features_no_labels(memgraph):
     """Export graph which has all nodes and edges without properties."""
     # Prepare queries
     queries = []
-    queries.append(f"CREATE (m {{id: 1}})")
-    queries.append(f"CREATE (m {{id: 2}})")
-    queries.append(f"CREATE (m {{id: 3}})")
-    queries.append(f"CREATE (m {{id: 4}})")
-    queries.append(f"MATCH (n {{id: 1}}), (m {{id: 2}}) CREATE (n)-[r:CONNECTION]->(m)")
-    queries.append(f"MATCH (n {{id: 2}}), (m {{id: 3}}) CREATE (n)-[r:CONNECTION]->(m)")
-    queries.append(f"MATCH (n {{id: 3}}), (m {{id: 4}}) CREATE (n)-[r:CONNECTION]->(m)")
-    queries.append(f"MATCH (n {{id: 4}}), (m {{id: 1}}) CREATE (n)-[r:CONNECTION]->(m)")
-    queries.append(f"MATCH (n {{id: 1}}), (m {{id: 3}}) CREATE (n)-[r:CONNECTION]->(m)")
-    queries.append(f"MATCH (n {{id: 2}}), (m {{id: 4}}) CREATE (n)-[r:CONNECTION]->(m)")
-    queries.append(f"MATCH (n {{id: 4}}), (m {{id: 2}}) CREATE (n)-[r:CONNECTION]->(m)")
-    queries.append(f"MATCH (n {{id: 3}}), (m {{id: 1}}) CREATE (n)-[r:CONNECTION]->(m)")
-    queries.append(f"MATCH (n) REMOVE n.id")
+    queries.append("CREATE (m {id: 1})")
+    queries.append("CREATE (m {id: 2})")
+    queries.append("CREATE (m {id: 3})")
+    queries.append("CREATE (m {id: 4})")
+    queries.append("MATCH (n {id: 1}), (m {id: 2}) CREATE (n)-[r:CONNECTION]->(m)")
+    queries.append("MATCH (n {id: 2}), (m {id: 3}) CREATE (n)-[r:CONNECTION]->(m)")
+    queries.append("MATCH (n {id: 3}), (m {id: 4}) CREATE (n)-[r:CONNECTION]->(m)")
+    queries.append("MATCH (n {id: 4}), (m {id: 1}) CREATE (n)-[r:CONNECTION]->(m)")
+    queries.append("MATCH (n {id: 1}), (m {id: 3}) CREATE (n)-[r:CONNECTION]->(m)")
+    queries.append("MATCH (n {id: 2}), (m {id: 4}) CREATE (n)-[r:CONNECTION]->(m)")
+    queries.append("MATCH (n {id: 4}), (m {id: 2}) CREATE (n)-[r:CONNECTION]->(m)")
+    queries.append("MATCH (n {id: 3}), (m {id: 1}) CREATE (n)-[r:CONNECTION]->(m)")
+    queries.append("MATCH (n) REMOVE n.id")
     execute_queries(memgraph, queries)
     # Translate to nx graph
     translator = NxTranslator()
@@ -148,18 +148,16 @@ def test_nx_export_multiple_labels(memgraph):
     """Tests exporting to nx when using multiple labels for nodes."""
     # Prepare queries
     queries = []
-    queries.append(f"CREATE (m:Node:Mode {{id: 1}})")
-    queries.append(f"CREATE (m:Node:Mode {{id: 2}})")
-    queries.append(f"CREATE (m:Node {{id: 3}})")
-    queries.append(f"CREATE (m:Node {{id: 4}})")
-    queries.append(
-        f"MATCH (n:Node:Mode {{id: 1}}), (m:Node:Mode {{id: 2}}) CREATE (n)-[r:CONNECTION {{edge_id: 1}}]->(m)"
-    )
-    queries.append(f"MATCH (n:Node:Mode {{id: 2}}), (m:Node {{id: 3}}) CREATE (n)-[r:CONNECTION {{edge_id: 2}}]->(m)")
-    queries.append(f"MATCH (n:Node {{id: 3}}), (m:Node {{id: 4}}) CREATE (n)-[r:CONNECTION {{edge_id: 3}}]->(m)")
-    queries.append(f"MATCH (n:Node {{id: 4}}), (m:Node:Mode {{id: 1}}) CREATE (n)-[r:CONNECTION {{edge_id: 4}}]->(m)")
-    queries.append(f"MATCH (n:Node:Mode {{id: 1}}), (m:Node {{id: 3}}) CREATE (n)-[r:CONNECTION {{edge_id: 5}}]->(m)")
-    queries.append(f"MATCH (n:Node:Mode {{id: 2}}), (m:Node {{id: 4}}) CREATE (n)-[r:CONNECTION {{edge_id: 6}}]->(m)")
+    queries.append("CREATE (m:Node:Mode {id: 1})")
+    queries.append("CREATE (m:Node:Mode {id: 2})")
+    queries.append("CREATE (m:Node {id: 3})")
+    queries.append("CREATE (m:Node {id: 4})")
+    queries.append("MATCH (n:Node:Mode {id: 1}), (m:Node:Mode {id: 2}) CREATE (n)-[r:CONNECTION {edge_id: 1}]->(m)")
+    queries.append("MATCH (n:Node:Mode {id: 2}), (m:Node {id: 3}) CREATE (n)-[r:CONNECTION {edge_id: 2}]->(m)")
+    queries.append("MATCH (n:Node {id: 3}), (m:Node {id: 4}) CREATE (n)-[r:CONNECTION {edge_id: 3}]->(m)")
+    queries.append("MATCH (n:Node {id: 4}), (m:Node:Mode {id: 1}) CREATE (n)-[r:CONNECTION {edge_id: 4}]->(m)")
+    queries.append("MATCH (n:Node:Mode {id: 1}), (m:Node {id: 3}) CREATE (n)-[r:CONNECTION {edge_id: 5}]->(m)")
+    queries.append("MATCH (n:Node:Mode {id: 2}), (m:Node {id: 4}) CREATE (n)-[r:CONNECTION {edge_id: 6}]->(m)")
     execute_queries(memgraph, queries)
     translator = NxTranslator()
     graph = translator.get_instance()
@@ -172,33 +170,33 @@ def test_nx_export_many_numerical_properties(memgraph):
     """Test graph that has several numerical features on nodes and edges."""
     # Prepare queries
     queries = []
-    queries.append(f"CREATE (m:Node {{id: 1, num: 80, edem: 30}})")
-    queries.append(f"CREATE (m:Node {{id: 2, num: 91, edem: 32}})")
-    queries.append(f"CREATE (m:Node {{id: 3, num: 100, edem: 34}})")
-    queries.append(f"CREATE (m:Node {{id: 4, num: 12, edem: 34}})")
+    queries.append("CREATE (m:Node {id: 1, num: 80, edem: 30})")
+    queries.append("CREATE (m:Node {id: 2, num: 91, edem: 32})")
+    queries.append("CREATE (m:Node {id: 3, num: 100, edem: 34})")
+    queries.append("CREATE (m:Node {id: 4, num: 12, edem: 34})")
     queries.append(
-        f"MATCH (n:Node {{id: 1}}), (m:Node {{id: 2}}) CREATE (n)-[r:CONNECTION {{edge_id: 1, edge_num: 99, edge_edem: 12}}]->(m)"
+        "MATCH (n:Node {id: 1}), (m:Node {id: 2}) CREATE (n)-[r:CONNECTION {edge_id: 1, edge_num: 99, edge_edem: 12}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 2}}), (m:Node {{id: 3}}) CREATE (n)-[r:CONNECTION {{edge_id: 2, edge_num: 99, edge_edem: 12}}]->(m)"
+        "MATCH (n:Node {id: 2}), (m:Node {id: 3}) CREATE (n)-[r:CONNECTION {edge_id: 2, edge_num: 99, edge_edem: 12}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 3}}), (m:Node {{id: 4}}) CREATE (n)-[r:CONNECTION {{edge_id: 3, edge_num: 99, edge_edem: 12}}]->(m)"
+        "MATCH (n:Node {id: 3}), (m:Node {id: 4}) CREATE (n)-[r:CONNECTION {edge_id: 3, edge_num: 99, edge_edem: 12}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 4}}), (m:Node {{id: 1}}) CREATE (n)-[r:CONNECTION {{edge_id: 4, edge_num: 99, edge_edem: 12}}]->(m)"
+        "MATCH (n:Node {id: 4}), (m:Node {id: 1}) CREATE (n)-[r:CONNECTION {edge_id: 4, edge_num: 99, edge_edem: 12}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 1}}), (m:Node {{id: 3}}) CREATE (n)-[r:CONNECTION {{edge_id: 5, edge_num: 99, edge_edem: 12}}]->(m)"
+        "MATCH (n:Node {id: 1}), (m:Node {id: 3}) CREATE (n)-[r:CONNECTION {edge_id: 5, edge_num: 99, edge_edem: 12}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 2}}), (m:Node {{id: 4}}) CREATE (n)-[r:CONNECTION {{edge_id: 6, edge_num: 99, edge_edem: 12}}]->(m)"
+        "MATCH (n:Node {id: 2}), (m:Node {id: 4}) CREATE (n)-[r:CONNECTION {edge_id: 6, edge_num: 99, edge_edem: 12}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 4}}), (m:Node {{id: 2}}) CREATE (n)-[r:CONNECTION {{edge_id: 7, edge_num: 99, edge_edem: 12}}]->(m)"
+        "MATCH (n:Node {id: 4}), (m:Node {id: 2}) CREATE (n)-[r:CONNECTION {edge_id: 7, edge_num: 99, edge_edem: 12}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 3}}), (m:Node {{id: 1}}) CREATE (n)-[r:CONNECTION {{edge_id: 8, edge_num: 99, edge_edem: 12}}]->(m)"
+        "MATCH (n:Node {id: 3}), (m:Node {id: 1}) CREATE (n)-[r:CONNECTION {edge_id: 8, edge_num: 99, edge_edem: 12}]->(m)"
     )
     execute_queries(memgraph, queries)
     translator = NxTranslator()
@@ -212,33 +210,33 @@ def test_nx_export_list_properties(memgraph):
     """Test graph that has several numerical features on all nodes and edges together with lists that could represent feature vectors."""
     # Prepare queries
     queries = []
-    queries.append(f"CREATE (m:Node {{id: 1, num: 80, edem: 30, lst: [2, 3, 3, 2]}})")
-    queries.append(f"CREATE (m:Node {{id: 2, num: 91, edem: 32, lst: [2, 2, 3, 3]}})")
-    queries.append(f"CREATE (m:Node {{id: 3, num: 100, edem: 34, lst: [3, 2, 2, 3]}})")
-    queries.append(f"CREATE (m:Node {{id: 4, num: 12, edem: 34, lst: [2, 2, 2, 3]}})")
+    queries.append("CREATE (m:Node {id: 1, num: 80, edem: 30, lst: [2, 3, 3, 2]})")
+    queries.append("CREATE (m:Node {id: 2, num: 91, edem: 32, lst: [2, 2, 3, 3]})")
+    queries.append("CREATE (m:Node {id: 3, num: 100, edem: 34, lst: [3, 2, 2, 3]})")
+    queries.append("CREATE (m:Node {id: 4, num: 12, edem: 34, lst: [2, 2, 2, 3]})")
     queries.append(
-        f"MATCH (n:Node {{id: 1}}), (m:Node {{id: 2}}) CREATE (n)-[r:CONNECTION {{edge_id: 1, edge_num: 99, edge_edem: 12, edge_lst: [0, 1, 0, 1]}}]->(m)"
+        "MATCH (n:Node {id: 1}), (m:Node {id: 2}) CREATE (n)-[r:CONNECTION {edge_id: 1, edge_num: 99, edge_edem: 12, edge_lst: [0, 1, 0, 1]}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 2}}), (m:Node {{id: 3}}) CREATE (n)-[r:CONNECTION {{edge_id: 2, edge_num: 99, edge_edem: 12, edge_lst: [0, 1, 0, 1]}}]->(m)"
+        "MATCH (n:Node {id: 2}), (m:Node {id: 3}) CREATE (n)-[r:CONNECTION {edge_id: 2, edge_num: 99, edge_edem: 12, edge_lst: [0, 1, 0, 1]}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 3}}), (m:Node {{id: 4}}) CREATE (n)-[r:CONNECTION {{edge_id: 3, edge_num: 99, edge_edem: 12, edge_lst: [1, 0, 1, 0]}}]->(m)"
+        "MATCH (n:Node {id: 3}), (m:Node {id: 4}) CREATE (n)-[r:CONNECTION {edge_id: 3, edge_num: 99, edge_edem: 12, edge_lst: [1, 0, 1, 0]}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 4}}), (m:Node {{id: 1}}) CREATE (n)-[r:CONNECTION {{edge_id: 4, edge_num: 99, edge_edem: 12, edge_lst: [0, 1, 0, 1]}}]->(m)"
+        "MATCH (n:Node {id: 4}), (m:Node {id: 1}) CREATE (n)-[r:CONNECTION {edge_id: 4, edge_num: 99, edge_edem: 12, edge_lst: [0, 1, 0, 1]}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 1}}), (m:Node {{id: 3}}) CREATE (n)-[r:CONNECTION {{edge_id: 5, edge_num: 99, edge_edem: 12, edge_lst: [0, 1, 0, 1]}}]->(m)"
+        "MATCH (n:Node {id: 1}), (m:Node {id: 3}) CREATE (n)-[r:CONNECTION {edge_id: 5, edge_num: 99, edge_edem: 12, edge_lst: [0, 1, 0, 1]}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 2}}), (m:Node {{id: 4}}) CREATE (n)-[r:CONNECTION {{edge_id: 6, edge_num: 99, edge_edem: 12, edge_lst: [0, 1, 0, 1]}}]->(m)"
+        "MATCH (n:Node {id: 2}), (m:Node {id: 4}) CREATE (n)-[r:CONNECTION {edge_id: 6, edge_num: 99, edge_edem: 12, edge_lst: [0, 1, 0, 1]}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 4}}), (m:Node {{id: 2}}) CREATE (n)-[r:CONNECTION {{edge_id: 7, edge_num: 99, edge_edem: 12, edge_lst: [1, 1, 0, 0]}}]->(m)"
+        "MATCH (n:Node {id: 4}), (m:Node {id: 2}) CREATE (n)-[r:CONNECTION {edge_id: 7, edge_num: 99, edge_edem: 12, edge_lst: [1, 1, 0, 0]}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 3}}), (m:Node {{id: 1}}) CREATE (n)-[r:CONNECTION {{edge_id: 8, edge_num: 99, edge_edem: 12, edge_lst: [0, 1, 0, 1]}}]->(m)"
+        "MATCH (n:Node {id: 3}), (m:Node {id: 1}) CREATE (n)-[r:CONNECTION {edge_id: 8, edge_num: 99, edge_edem: 12, edge_lst: [0, 1, 0, 1]}]->(m)"
     )
     execute_queries(memgraph, queries)
     translator = NxTranslator()
@@ -252,33 +250,33 @@ def test_nx_export_various_dimensionality_list_properties(memgraph):
     """When lists have various dimensions, they should get translated in the same way as when for all nodes are of the same dimension."""
     # Prepare queries
     queries = []
-    queries.append(f"CREATE (m:Node {{id: 1, num: 80, edem: 30, lst: [2, 3, 3, 2]}})")
-    queries.append(f"CREATE (m:Node {{id: 2, num: 91, edem: 32, lst: [2, 2, 3, 3]}})")
-    queries.append(f"CREATE (m:Node {{id: 3, num: 100, edem: 34, lst: [3, 2, 2, 3, 4, 4]}})")
-    queries.append(f"CREATE (m:Node {{id: 4, num: 12, edem: 34, lst: [2, 2, 2, 3, 5, 5]}})")
+    queries.append("CREATE (m:Node {id: 1, num: 80, edem: 30, lst: [2, 3, 3, 2]})")
+    queries.append("CREATE (m:Node {id: 2, num: 91, edem: 32, lst: [2, 2, 3, 3]})")
+    queries.append("CREATE (m:Node {id: 3, num: 100, edem: 34, lst: [3, 2, 2, 3, 4, 4]})")
+    queries.append("CREATE (m:Node {id: 4, num: 12, edem: 34, lst: [2, 2, 2, 3, 5, 5]})")
     queries.append(
-        f"MATCH (n:Node {{id: 1}}), (m:Node {{id: 2}}) CREATE (n)-[r:CONNECTION {{edge_id: 1, edge_num: 99, edge_edem: 12, edge_lst: [0, 1, 0, 1, 0, 1, 0, 1]}}]->(m)"
+        "MATCH (n:Node {id: 1}), (m:Node {id: 2}) CREATE (n)-[r:CONNECTION {edge_id: 1, edge_num: 99, edge_edem: 12, edge_lst: [0, 1, 0, 1, 0, 1, 0, 1]}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 2}}), (m:Node {{id: 3}}) CREATE (n)-[r:CONNECTION {{edge_id: 2, edge_num: 99, edge_edem: 12, edge_lst: [0, 1, 0, 1]}}]->(m)"
+        "MATCH (n:Node {id: 2}), (m:Node {id: 3}) CREATE (n)-[r:CONNECTION {edge_id: 2, edge_num: 99, edge_edem: 12, edge_lst: [0, 1, 0, 1]}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 3}}), (m:Node {{id: 4}}) CREATE (n)-[r:CONNECTION {{edge_id: 3, edge_num: 99, edge_edem: 12, edge_lst: [1, 0, 1, 0, 1, 0, 1]}}]->(m)"
+        "MATCH (n:Node {id: 3}), (m:Node {id: 4}) CREATE (n)-[r:CONNECTION {edge_id: 3, edge_num: 99, edge_edem: 12, edge_lst: [1, 0, 1, 0, 1, 0, 1]}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 4}}), (m:Node {{id: 1}}) CREATE (n)-[r:CONNECTION {{edge_id: 4, edge_num: 99, edge_edem: 12, edge_lst: [0, 1, 0, 1]}}]->(m)"
+        "MATCH (n:Node {id: 4}), (m:Node {id: 1}) CREATE (n)-[r:CONNECTION {edge_id: 4, edge_num: 99, edge_edem: 12, edge_lst: [0, 1, 0, 1]}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 1}}), (m:Node {{id: 3}}) CREATE (n)-[r:CONNECTION {{edge_id: 5, edge_num: 99, edge_edem: 12, edge_lst: [0, 1, 0, 1]}}]->(m)"
+        "MATCH (n:Node {id: 1}), (m:Node {id: 3}) CREATE (n)-[r:CONNECTION {edge_id: 5, edge_num: 99, edge_edem: 12, edge_lst: [0, 1, 0, 1]}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 2}}), (m:Node {{id: 4}}) CREATE (n)-[r:CONNECTION {{edge_id: 6, edge_num: 99, edge_edem: 12, edge_lst: [0, 1, 0, 1, 0, 0]}}]->(m)"
+        "MATCH (n:Node {id: 2}), (m:Node {id: 4}) CREATE (n)-[r:CONNECTION {edge_id: 6, edge_num: 99, edge_edem: 12, edge_lst: [0, 1, 0, 1, 0, 0]}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 4}}), (m:Node {{id: 2}}) CREATE (n)-[r:CONNECTION {{edge_id: 7, edge_num: 99, edge_edem: 12, edge_lst: [1, 1, 0, 0, 1, 1, 0, 1]}}]->(m)"
+        "MATCH (n:Node {id: 4}), (m:Node {id: 2}) CREATE (n)-[r:CONNECTION {edge_id: 7, edge_num: 99, edge_edem: 12, edge_lst: [1, 1, 0, 0, 1, 1, 0, 1]}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 3}}), (m:Node {{id: 1}}) CREATE (n)-[r:CONNECTION {{edge_id: 8, edge_num: 99, edge_edem: 12, edge_lst: [0, 1, 0, 1]}}]->(m)"
+        "MATCH (n:Node {id: 3}), (m:Node {id: 1}) CREATE (n)-[r:CONNECTION {edge_id: 8, edge_num: 99, edge_edem: 12, edge_lst: [0, 1, 0, 1]}]->(m)"
     )
     execute_queries(memgraph, queries)
     translator = NxTranslator()
@@ -292,33 +290,33 @@ def test_nx_export_non_numeric_properties(memgraph):
     """Test graph which has some non-numeric properties. Non-numeric properties should be translated in the same way as those numeric."""
     # Prepare queries
     queries = []
-    queries.append(f"CREATE (m:Node {{id: 1, num: 80, edem: 'one', lst: [2, 3, 3, 2]}})")
-    queries.append(f"CREATE (m:Node {{id: 2, num: 91, edem: 'two', lst: [2, 2, 3, 3]}})")
-    queries.append(f"CREATE (m:Node {{id: 3, num: 100, edem: 'three', lst: [3, 2, 2, 3]}})")
-    queries.append(f"CREATE (m:Node {{id: 4, num: 12, edem: 'fourth', lst: [2, 2, 2, 3]}})")
+    queries.append("CREATE (m:Node {id: 1, num: 80, edem: 'one', lst: [2, 3, 3, 2]})")
+    queries.append("CREATE (m:Node {id: 2, num: 91, edem: 'two', lst: [2, 2, 3, 3]})")
+    queries.append("CREATE (m:Node {id: 3, num: 100, edem: 'three', lst: [3, 2, 2, 3]})")
+    queries.append("CREATE (m:Node {id: 4, num: 12, edem: 'fourth', lst: [2, 2, 2, 3]})")
     queries.append(
-        f"MATCH (n:Node {{id: 1}}), (m:Node {{id: 2}}) CREATE (n)-[r:CONNECTION {{edge_id: 1, edge_num: 99, edge_edem: 'hi', edge_lst: [0, 1, 0, 1]}}]->(m)"
+        "MATCH (n:Node {id: 1}), (m:Node {id: 2}) CREATE (n)-[r:CONNECTION {edge_id: 1, edge_num: 99, edge_edem: 'hi', edge_lst: [0, 1, 0, 1]}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 2}}), (m:Node {{id: 3}}) CREATE (n)-[r:CONNECTION {{edge_id: 2, edge_num: 99, edge_edem: 'hu', edge_lst: [0, 1, 0, 1]}}]->(m)"
+        "MATCH (n:Node {id: 2}), (m:Node {id: 3}) CREATE (n)-[r:CONNECTION {edge_id: 2, edge_num: 99, edge_edem: 'hu', edge_lst: [0, 1, 0, 1]}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 3}}), (m:Node {{id: 4}}) CREATE (n)-[r:CONNECTION {{edge_id: 3, edge_num: 99, edge_edem: 'ho', edge_lst: [1, 0, 1, 0]}}]->(m)"
+        "MATCH (n:Node {id: 3}), (m:Node {id: 4}) CREATE (n)-[r:CONNECTION {edge_id: 3, edge_num: 99, edge_edem: 'ho', edge_lst: [1, 0, 1, 0]}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 4}}), (m:Node {{id: 1}}) CREATE (n)-[r:CONNECTION {{edge_id: 4, edge_num: 99, edge_edem: 'la', edge_lst: [0, 1, 0, 1]}}]->(m)"
+        "MATCH (n:Node {id: 4}), (m:Node {id: 1}) CREATE (n)-[r:CONNECTION {edge_id: 4, edge_num: 99, edge_edem: 'la', edge_lst: [0, 1, 0, 1]}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 1}}), (m:Node {{id: 3}}) CREATE (n)-[r:CONNECTION {{edge_id: 5, edge_num: 99, edge_edem: 'le', edge_lst: [0, 1, 0, 1]}}]->(m)"
+        "MATCH (n:Node {id: 1}), (m:Node {id: 3}) CREATE (n)-[r:CONNECTION {edge_id: 5, edge_num: 99, edge_edem: 'le', edge_lst: [0, 1, 0, 1]}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 2}}), (m:Node {{id: 4}}) CREATE (n)-[r:CONNECTION {{edge_id: 6, edge_num: 99, edge_edem: 'do', edge_lst: [0, 1, 0, 1]}}]->(m)"
+        "MATCH (n:Node {id: 2}), (m:Node {id: 4}) CREATE (n)-[r:CONNECTION {edge_id: 6, edge_num: 99, edge_edem: 'do', edge_lst: [0, 1, 0, 1]}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 4}}), (m:Node {{id: 2}}) CREATE (n)-[r:CONNECTION {{edge_id: 7, edge_num: 99, edge_edem: 're', edge_lst: [1, 1, 0, 0]}}]->(m)"
+        "MATCH (n:Node {id: 4}), (m:Node {id: 2}) CREATE (n)-[r:CONNECTION {edge_id: 7, edge_num: 99, edge_edem: 're', edge_lst: [1, 1, 0, 0]}]->(m)"
     )
     queries.append(
-        f"MATCH (n:Node {{id: 3}}), (m:Node {{id: 1}}) CREATE (n)-[r:CONNECTION {{edge_id: 8, edge_num: 99, edge_edem: 'mi', edge_lst: [0, 1, 0, 1]}}]->(m)"
+        "MATCH (n:Node {id: 3}), (m:Node {id: 1}) CREATE (n)-[r:CONNECTION {edge_id: 8, edge_num: 99, edge_edem: 'mi', edge_lst: [0, 1, 0, 1]}]->(m)"
     )
     execute_queries(memgraph, queries)
     translator = NxTranslator()

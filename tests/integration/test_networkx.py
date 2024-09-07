@@ -15,10 +15,10 @@
 import pytest
 from random import randint
 
-import networkx as nx
+import networkx as nx  # type: ignore[import-untyped]
 
 from gqlalchemy import Memgraph
-from gqlalchemy.models import MemgraphIndex
+from gqlalchemy.models.constraints import MemgraphIndex
 from gqlalchemy.transformations.translators.nx_translator import NxTranslator
 from gqlalchemy.utilities import NetworkXCypherConfig
 
